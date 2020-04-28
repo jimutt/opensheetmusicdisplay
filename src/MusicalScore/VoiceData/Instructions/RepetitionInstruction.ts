@@ -50,6 +50,10 @@ export class RepetitionInstruction /*implements IComparable*/ {
         this.type = type;
         this.alignment = alignment;
         this.parentRepetition = parentRepetition;
+
+        if (this.parentRepetition !== undefined) {
+            this.updateParentRepetition();
+        }
     }
 
     public measureIndex: number;
@@ -57,6 +61,15 @@ export class RepetitionInstruction /*implements IComparable*/ {
     public type: RepetitionInstructionEnum;
     public alignment: AlignmentType;
     public parentRepetition: Repetition;
+
+    private updateParentRepetition(): void {
+        if (this.type === RepetitionInstructionEnum.StartLine) {
+            this.parentRepetition.startMarker = this;
+        } else if (this.type === RepetitionInstructionEnum.BackJumpLine) {
+            this.parentRepetition.endMarker = this;
+            this.parentRepetition.BackwardJumpInstructions.push(this);
+        }
+    }
 
     public CompareTo(obj: Object): number {
         const other: RepetitionInstruction = <RepetitionInstruction>obj;

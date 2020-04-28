@@ -20,7 +20,7 @@ export class Repetition extends PartListEntry /*implements IRepetition*/ {
     private backwardJumpInstructions: RepetitionInstruction[] = [];
     private endingParts: RepetitionEndingPart[] = [];
     private endingIndexDict: { [_: number]: RepetitionEndingPart; } = {};
-    private userNumberOfRepetitions: number = 0;
+    private userNumberOfRepetitions: number = 1;
     private visibles: boolean[] = [];
     private fromWords: boolean = false;
     private musicSheet2: MusicSheet;

@@ -15,6 +15,7 @@ import {InstantaneousDynamicExpression} from "../VoiceData/Expressions/Instantan
 import {MultiTempoExpression} from "../VoiceData/Expressions/MultiTempoExpression";
 import {AbstractExpression} from "../VoiceData/Expressions/AbstractExpression";
 import log from "loglevel";
+import { Dictionary } from "typescript-collections";
 
 export class MusicPartManagerIterator {
     constructor(manager: MusicPartManager, startTimestamp?: Fraction, endTimestamp?: Fraction) {
@@ -65,8 +66,7 @@ export class MusicPartManagerIterator {
     private currentDynamicChangingExpressions: DynamicsContainer[] = [];
     private currentTempoChangingExpression: MultiTempoExpression;
     // FIXME: replace these two with a real Dictionary!
-    private repetitionIterationCountDictKeys: Repetition[];
-    private repetitionIterationCountDictValues: number[];
+    private repetitionIterationCount: Dictionary<Repetition, number> = new Dictionary<Repetition, number>();
     private currentRepetition: Repetition = undefined;
     private endReached: boolean = false;
     private frontReached: boolean = false;
@@ -252,27 +252,20 @@ export class MusicPartManagerIterator {
         return 1;
     }
     private incrementRepetitionIterationCount(repetition: Repetition): number {
-        if (this.repetitionIterationCountDictKeys.indexOf(repetition) === -1) {
+        if (!this.repetitionIterationCount.containsKey(repetition)) {
             return this.setRepetitionIterationCount(repetition, 1);
+
         } else {
             return this.setRepetitionIterationCount(repetition, this.getRepetitionIterationCount(repetition) + 1);
+
         }
     }
     private setRepetitionIterationCount(repetition: Repetition, iterationCount: number): number {
-        const i: number = this.repetitionIterationCountDictKeys.indexOf(repetition);
-        if (i === -1) {
-            this.repetitionIterationCountDictKeys.push(repetition);
-            this.repetitionIterationCountDictValues.push(iterationCount);
-        } else {
-            this.repetitionIterationCountDictValues[i] = iterationCount;
-        }
+        this.repetitionIterationCount.setValue(repetition, iterationCount);
         return iterationCount;
     }
     private getRepetitionIterationCount(rep: Repetition): number {
-        const i: number = this.repetitionIterationCountDictKeys.indexOf(rep);
-        if (i !== -1) {
-            return this.repetitionIterationCountDictValues[i];
-        }
+        return this.repetitionIterationCount.getValue(rep) || 0;
     }
 /*    private moveTempoIndexToTimestamp(measureNumber: number): void {
         for (let index: number = 0; index < this.manager.MusicSheet.TimestampSortedTempoExpressionsList.length; index++) {

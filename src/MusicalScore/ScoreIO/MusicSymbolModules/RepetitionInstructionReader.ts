@@ -4,12 +4,14 @@ import {SourceMeasure} from "../../VoiceData/SourceMeasure";
 import {RepetitionInstruction, RepetitionInstructionEnum, AlignmentType} from "../../VoiceData/Instructions/RepetitionInstruction";
 import {RepetitionInstructionComparer} from "../../VoiceData/Instructions/RepetitionInstruction";
 import {StringUtil} from "../../../Common/Strings/StringUtil";
+import { Repetition } from "../../MusicSource/Repetition";
 export class RepetitionInstructionReader {
   /**
    * A global list of all repetition instructions in the musicsheet.
    */
   public repetitionInstructions: RepetitionInstruction[];
   public xmlMeasureList: IXmlElement[][];
+  private tempRepititions: Map<RepetitionInstructionEnum, Repetition[]> = new Map<RepetitionInstructionEnum, Repetition[]>();
   private musicSheet: MusicSheet;
   private currentMeasureIndex: number;
 
@@ -58,6 +60,7 @@ export class RepetitionInstructionReader {
         if ("repeat" === childNode.name && childNode.hasAttributes) {
           hasRepeat = true;
           direction = childNode.attribute("direction").value;
+          console.log("Repeat childNode: ", childNode);
         } else if ( "ending" === childNode.name && childNode.hasAttributes &&
                     childNode.attribute("type") !== undefined && childNode.attribute("number") !== undefined) {
           type = childNode.attribute("type").value;
@@ -92,6 +95,7 @@ export class RepetitionInstructionReader {
         pieceEndingDetected = true;
       }
       if (hasRepeat || endingIndices.length > 0) {
+        console.log(`Has repeat. Location: ${location} Type: ${type} Direction: ${direction}`);
         if (location === "left") {
           if (type === "start") {
             const newInstruction: RepetitionInstruction = new RepetitionInstruction(this.currentMeasureIndex, RepetitionInstructionEnum.Ending,
@@ -100,7 +104,10 @@ export class RepetitionInstructionReader {
           }
           if (direction === "forward") {
             // start new Repetition
-            const newInstruction: RepetitionInstruction = new RepetitionInstruction(this.currentMeasureIndex, RepetitionInstructionEnum.StartLine);
+            const repetition: Repetition = new Repetition(this.musicSheet, false);
+            this.addRepetition(RepetitionInstructionEnum.StartLine, repetition);
+            const newInstruction: RepetitionInstruction = new RepetitionInstruction(this.currentMeasureIndex, RepetitionInstructionEnum.StartLine,
+                                                                                    AlignmentType.End, repetition);
             this.addInstruction(this.repetitionInstructions, newInstruction);
           }
         } else { // location right
@@ -110,12 +117,22 @@ export class RepetitionInstructionReader {
             this.addInstruction(this.repetitionInstructions, newInstruction);
           }
           if (direction === "backward") {
-            const newInstruction: RepetitionInstruction = new RepetitionInstruction(this.currentMeasureIndex, RepetitionInstructionEnum.BackJumpLine);
+            const parentRepetition: Repetition = this.tempRepititions.get(RepetitionInstructionEnum.StartLine).pop();
+            const newInstruction: RepetitionInstruction = new RepetitionInstruction(this.currentMeasureIndex, RepetitionInstructionEnum.BackJumpLine,
+                                                                                    AlignmentType.End, parentRepetition);
+
             this.addInstruction(this.repetitionInstructions, newInstruction);
           }
         }
       }
     }
+  }
+
+  private addRepetition(type: RepetitionInstructionEnum, repetition: Repetition): void {
+    if (this.tempRepititions.get(type) === undefined) {
+      this.tempRepititions.set(type, []);
+    }
+    this.tempRepititions.get(type).push(repetition);
   }
 
   public handleRepetitionInstructionsFromWordsOrSymbols(directionTypeNode: IXmlElement, relativeMeasurePosition: number): boolean {
@@ -357,15 +374,7 @@ export class RepetitionInstructionReader {
   }
 
   private addInstruction(currentRepetitionInstructions: RepetitionInstruction[], newInstruction: RepetitionInstruction): void {
-    let addInstruction: boolean = true;
-    for (let idx: number = 0, len: number = currentRepetitionInstructions.length; idx < len; ++idx) {
-      const repetitionInstruction: RepetitionInstruction = currentRepetitionInstructions[idx];
-      if (newInstruction.equals(repetitionInstruction)) {
-        addInstruction = false;
-        break;
-      }
-    }
-    if (addInstruction) {
+    if (currentRepetitionInstructions.findIndex(r => newInstruction.equals(r)) === -1) {
       currentRepetitionInstructions.push(newInstruction);
     }
   }
