@@ -61,7 +61,6 @@ export class RepetitionInstructionReader {
         if ("repeat" === childNode.name && childNode.hasAttributes) {
           hasRepeat = true;
           direction = childNode.attribute("direction").value;
-          console.log("Repeat childNode: ", childNode);
         } else if ( "ending" === childNode.name && childNode.hasAttributes &&
                     childNode.attribute("type") !== undefined && childNode.attribute("number") !== undefined) {
           type = childNode.attribute("type").value;
@@ -97,9 +96,6 @@ export class RepetitionInstructionReader {
       }
       if (hasRepeat || endingIndices.length > 0) {
         this.addInitialRepetitionIfNeeded(type, direction);
-
-        console.log(`Has repeat. Location: ${location} Type: ${type} Direction: ${direction}`);
-        console.log("Ending indices: ", endingIndices);
 
         if (location === "left") {
           if (type === "start") {

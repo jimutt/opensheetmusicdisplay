@@ -45,7 +45,6 @@ export class RepetitionCalculator {
     if (!this.currentMeasure) {
       return false;
     }
-    console.log(`RepetitionCalculator - Handle repetitions instruction: ${currentRepetitionInstruction} Type: ${currentRepetitionInstruction.type} `);
 
     switch (currentRepetitionInstruction.type) {
       case RepetitionInstructionEnum.StartLine:
@@ -57,7 +56,6 @@ export class RepetitionCalculator {
       case RepetitionInstructionEnum.Ending:
         // set ending start or end
         if (currentRepetitionInstruction.alignment === AlignmentType.Begin) {  // ending start
-          console.log("Add ending to FirstRepetitionInstructions: ", currentRepetitionInstruction);
           this.currentMeasure.FirstRepetitionInstructions.push(currentRepetitionInstruction);
         } else { // ending end
           for (let idx: number = 0, len: number = currentRepetitionInstruction.endingIndices.length; idx < len; ++idx) {

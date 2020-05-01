@@ -247,7 +247,6 @@ export class MusicPartManagerIterator {
         }
     }
     private resetRepetitionIterationCount(repetition: Repetition): number {
-        console.log("Reset iteration count for: ", repetition);
         this.setRepetitionIterationCount(repetition, 1);
         return 1;
     }
@@ -264,8 +263,6 @@ export class MusicPartManagerIterator {
         return iterationCount;
     }
     private getRepetitionIterationCount(rep: Repetition): number {
-        console.log("Get current repetition count for repetition: ", rep);
-        console.log(this.repetitionIterationCount);
         return this.repetitionIterationCount.get(rep) || 0;
     }
 /*    private moveTempoIndexToTimestamp(measureNumber: number): void {
@@ -317,11 +314,9 @@ export class MusicPartManagerIterator {
 
             const repetitionInstruction: RepetitionInstruction = this.currentMeasure.FirstRepetitionInstructions[idx];
             if (repetitionInstruction.parentRepetition === undefined) { continue; }
-            console.log("Measure begin repetition instruction: ", repetitionInstruction);
 
             const currentRepetition: Repetition = repetitionInstruction.parentRepetition;
             this.currentRepetition = currentRepetition;
-            console.log("Current repetition iteration: ", this.CurrentRepetitionIteration);
             if (currentRepetition.StartIndex === this.currentMeasureIndex) {
                 if (
                   this.JumpResponsibleRepetition !== undefined &&
@@ -355,7 +350,6 @@ export class MusicPartManagerIterator {
             const repetitionInstruction: RepetitionInstruction = this.currentMeasure.LastRepetitionInstructions[idx];
             const currentRepetition: Repetition = repetitionInstruction.parentRepetition;
             if (currentRepetition === undefined) { continue; }
-            console.log("Measure end repetition instruction: ", repetitionInstruction);
             if (currentRepetition.BackwardJumpInstructions.indexOf(repetitionInstruction) > -1) {
                 if (this.getRepetitionIterationCount(currentRepetition) < currentRepetition.UserNumberOfRepetitions) {
                     this.doBackJump(currentRepetition);
@@ -505,7 +499,6 @@ export class MusicPartManagerIterator {
     }
     private recursiveMove(): void {
         this.currentVoiceEntryIndex++;
-        console.log(`Recursive move. Current measure index: ${this.currentMeasureIndex} Current voice entry index: ${this.currentVoiceEntryIndex}`);
         if (this.currentVoiceEntryIndex === 0) {
             this.handleRepetitionsAtMeasureBegin();
             this.activateCurrentRhythmInstructions();
