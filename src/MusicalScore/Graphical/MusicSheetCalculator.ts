@@ -2660,6 +2660,7 @@ export abstract class MusicSheetCalculator {
 
     private calculateRepetitionEndings(): void {
         const musicsheet: MusicSheet = this.graphicalMusicSheet.ParentMusicSheet;
+        console.log("Calculate repetition endings. Repetitions: ", musicsheet.Repetitions);
         for (let idx: number = 0, len: number = musicsheet.Repetitions.length; idx < len; ++idx) {
             const repetition: Repetition = musicsheet.Repetitions[idx];
             this.calcGraphicalRepetitionEndingsRecursively(repetition);

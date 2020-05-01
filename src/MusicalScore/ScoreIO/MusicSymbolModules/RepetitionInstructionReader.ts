@@ -4,12 +4,15 @@ import {SourceMeasure} from "../../VoiceData/SourceMeasure";
 import {RepetitionInstruction, RepetitionInstructionEnum, AlignmentType} from "../../VoiceData/Instructions/RepetitionInstruction";
 import {RepetitionInstructionComparer} from "../../VoiceData/Instructions/RepetitionInstruction";
 import {StringUtil} from "../../../Common/Strings/StringUtil";
+import { Repetition } from "../../MusicSource/Repetition";
+
 export class RepetitionInstructionReader {
   /**
    * A global list of all repetition instructions in the musicsheet.
    */
   public repetitionInstructions: RepetitionInstruction[];
   public xmlMeasureList: IXmlElement[][];
+  private tempRepititions: Map<RepetitionInstructionEnum, Repetition[]> = new Map<RepetitionInstructionEnum, Repetition[]>();
   private musicSheet: MusicSheet;
   private currentMeasureIndex: number;
 
@@ -92,30 +95,71 @@ export class RepetitionInstructionReader {
         pieceEndingDetected = true;
       }
       if (hasRepeat || endingIndices.length > 0) {
+        this.addInitialRepetitionIfNeeded(type, direction);
+
         if (location === "left") {
           if (type === "start") {
+            const parentRepetition: Repetition = this.getActiveRepetition(RepetitionInstructionEnum.StartLine);
+            parentRepetition.SetEndingStartIndex(endingIndices, this.currentMeasureIndex);
             const newInstruction: RepetitionInstruction = new RepetitionInstruction(this.currentMeasureIndex, RepetitionInstructionEnum.Ending,
-                                                                                    AlignmentType.Begin, undefined, endingIndices);
+                                                                                    AlignmentType.Begin, parentRepetition, endingIndices);
             this.addInstruction(this.repetitionInstructions, newInstruction);
           }
           if (direction === "forward") {
             // start new Repetition
-            const newInstruction: RepetitionInstruction = new RepetitionInstruction(this.currentMeasureIndex, RepetitionInstructionEnum.StartLine);
+            const repetition: Repetition = new Repetition(this.musicSheet, false);
+            repetition.UserNumberOfRepetitions = 2;
+            this.musicSheet.Repetitions.push(repetition);
+
+            this.addRepetition(RepetitionInstructionEnum.StartLine, repetition);
+            const newInstruction: RepetitionInstruction = new RepetitionInstruction(this.currentMeasureIndex, RepetitionInstructionEnum.StartLine,
+                                                                                    AlignmentType.End, repetition);
             this.addInstruction(this.repetitionInstructions, newInstruction);
           }
         } else { // location right
           if (type === "stop") {
+            const parentRepetition: Repetition = this.getActiveRepetition(RepetitionInstructionEnum.StartLine);
+            parentRepetition.setEndingEndIndex(endingIndices[0], this.currentMeasureIndex);
             const newInstruction: RepetitionInstruction = new RepetitionInstruction(this.currentMeasureIndex, RepetitionInstructionEnum.Ending,
                                                                                     AlignmentType.End, undefined, endingIndices);
             this.addInstruction(this.repetitionInstructions, newInstruction);
           }
           if (direction === "backward") {
-            const newInstruction: RepetitionInstruction = new RepetitionInstruction(this.currentMeasureIndex, RepetitionInstructionEnum.BackJumpLine);
+            const parentRepetition: Repetition = this.getActiveRepetition(RepetitionInstructionEnum.StartLine);
+            const newInstruction: RepetitionInstruction = new RepetitionInstruction(this.currentMeasureIndex, RepetitionInstructionEnum.BackJumpLine,
+                                                                                    AlignmentType.End, parentRepetition);
+
             this.addInstruction(this.repetitionInstructions, newInstruction);
           }
         }
       }
     }
+  }
+
+  public addInitialRepetitionIfNeeded(type: string, direction: string): void {
+    if ((type === "start" || direction === "backward") && !this.repetitionInstructions.length) {
+      const instruction: RepetitionInstruction = new RepetitionInstruction(0, RepetitionInstructionEnum.StartLine);
+      this.repetitionInstructions.push(instruction);
+
+      const repetition: Repetition = new Repetition(this.musicSheet, false);
+      repetition.startMarker = instruction;
+      repetition.UserNumberOfRepetitions = 2;
+      this.musicSheet.Repetitions.push(repetition);
+
+      this.addRepetition(RepetitionInstructionEnum.StartLine, repetition);
+    }
+  }
+
+  private getActiveRepetition(type: RepetitionInstructionEnum): Repetition {
+    const repetitions: Repetition[] = this.tempRepititions.get(type);
+    return repetitions[repetitions.length - 1];
+  }
+
+  private addRepetition(type: RepetitionInstructionEnum, repetition: Repetition): void {
+    if (this.tempRepititions.get(type) === undefined) {
+      this.tempRepititions.set(type, []);
+    }
+    this.tempRepititions.get(type).push(repetition);
   }
 
   public handleRepetitionInstructionsFromWordsOrSymbols(directionTypeNode: IXmlElement, relativeMeasurePosition: number): boolean {
@@ -357,15 +401,7 @@ export class RepetitionInstructionReader {
   }
 
   private addInstruction(currentRepetitionInstructions: RepetitionInstruction[], newInstruction: RepetitionInstruction): void {
-    let addInstruction: boolean = true;
-    for (let idx: number = 0, len: number = currentRepetitionInstructions.length; idx < len; ++idx) {
-      const repetitionInstruction: RepetitionInstruction = currentRepetitionInstructions[idx];
-      if (newInstruction.equals(repetitionInstruction)) {
-        addInstruction = false;
-        break;
-      }
-    }
-    if (addInstruction) {
+    if (currentRepetitionInstructions.findIndex(r => newInstruction.equals(r)) === -1) {
       currentRepetitionInstructions.push(newInstruction);
     }
   }

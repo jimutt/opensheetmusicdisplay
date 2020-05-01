@@ -9,7 +9,7 @@ import {Instrument} from "../Instrument";
 import {VerticalSourceStaffEntryContainer} from "../VoiceData/VerticalSourceStaffEntryContainer";
 import {RhythmInstruction} from "../VoiceData/Instructions/RhythmInstruction";
 import {AbstractNotationInstruction} from "../VoiceData/Instructions/AbstractNotationInstruction";
-import {RepetitionInstruction} from "../VoiceData/Instructions/RepetitionInstruction";
+import {RepetitionInstruction, RepetitionInstructionEnum} from "../VoiceData/Instructions/RepetitionInstruction";
 import {ContinuousDynamicExpression} from "../VoiceData/Expressions/ContinuousExpressions/ContinuousDynamicExpression";
 import {InstantaneousDynamicExpression} from "../VoiceData/Expressions/InstantaneousDynamicExpression";
 import {MultiTempoExpression} from "../VoiceData/Expressions/MultiTempoExpression";
@@ -65,8 +65,7 @@ export class MusicPartManagerIterator {
     private currentDynamicChangingExpressions: DynamicsContainer[] = [];
     private currentTempoChangingExpression: MultiTempoExpression;
     // FIXME: replace these two with a real Dictionary!
-    private repetitionIterationCountDictKeys: Repetition[];
-    private repetitionIterationCountDictValues: number[];
+    private repetitionIterationCount: Map<Repetition, number> = new Map<Repetition, number>();
     private currentRepetition: Repetition = undefined;
     private endReached: boolean = false;
     private frontReached: boolean = false;
@@ -252,27 +251,19 @@ export class MusicPartManagerIterator {
         return 1;
     }
     private incrementRepetitionIterationCount(repetition: Repetition): number {
-        if (this.repetitionIterationCountDictKeys.indexOf(repetition) === -1) {
+        if (!this.repetitionIterationCount.get(repetition)) {
             return this.setRepetitionIterationCount(repetition, 1);
+
         } else {
             return this.setRepetitionIterationCount(repetition, this.getRepetitionIterationCount(repetition) + 1);
         }
     }
     private setRepetitionIterationCount(repetition: Repetition, iterationCount: number): number {
-        const i: number = this.repetitionIterationCountDictKeys.indexOf(repetition);
-        if (i === -1) {
-            this.repetitionIterationCountDictKeys.push(repetition);
-            this.repetitionIterationCountDictValues.push(iterationCount);
-        } else {
-            this.repetitionIterationCountDictValues[i] = iterationCount;
-        }
+        this.repetitionIterationCount.set(repetition, iterationCount);
         return iterationCount;
     }
     private getRepetitionIterationCount(rep: Repetition): number {
-        const i: number = this.repetitionIterationCountDictKeys.indexOf(rep);
-        if (i !== -1) {
-            return this.repetitionIterationCountDictValues[i];
-        }
+        return this.repetitionIterationCount.get(rep) || 0;
     }
 /*    private moveTempoIndexToTimestamp(measureNumber: number): void {
         for (let index: number = 0; index < this.manager.MusicSheet.TimestampSortedTempoExpressionsList.length; index++) {
@@ -320,8 +311,10 @@ export class MusicPartManagerIterator {
     */
     private handleRepetitionsAtMeasureBegin(): void {
         for (let idx: number = 0, len: number = this.currentMeasure.FirstRepetitionInstructions.length; idx < len; ++idx) {
+
             const repetitionInstruction: RepetitionInstruction = this.currentMeasure.FirstRepetitionInstructions[idx];
             if (repetitionInstruction.parentRepetition === undefined) { continue; }
+
             const currentRepetition: Repetition = repetitionInstruction.parentRepetition;
             this.currentRepetition = currentRepetition;
             if (currentRepetition.StartIndex === this.currentMeasureIndex) {
@@ -332,6 +325,21 @@ export class MusicPartManagerIterator {
                   currentRepetition.EndIndex <= this.JumpResponsibleRepetition.EndIndex
                 ) {
                     this.resetRepetitionIterationCount(currentRepetition);
+                }
+            } else if (repetitionInstruction.type === RepetitionInstructionEnum.Ending) {
+                const forwardJumpTargetIndex: number =  currentRepetition.EndingParts[this.CurrentRepetitionIteration - 1].part.StartIndex;
+                if (forwardJumpTargetIndex !== -1) {
+                    if (forwardJumpTargetIndex >= 0) {
+                        this.currentMeasureIndex = forwardJumpTargetIndex;
+                        this.currentMeasure = this.manager.MusicSheet.SourceMeasures[this.currentMeasureIndex];
+                        this.currentVoiceEntryIndex = 0;
+                        this.jumpResponsibleRepetition = currentRepetition;
+                        this.forwardJumpOccurred = true;
+                        return;
+                    }
+                    if (forwardJumpTargetIndex === -2) {
+                        this.endReached = true;
+                    }
                 }
             }
         }

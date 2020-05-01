@@ -45,6 +45,7 @@ export class RepetitionCalculator {
     if (!this.currentMeasure) {
       return false;
     }
+
     switch (currentRepetitionInstruction.type) {
       case RepetitionInstructionEnum.StartLine:
         this.currentMeasure.FirstRepetitionInstructions.push(currentRepetitionInstruction);
